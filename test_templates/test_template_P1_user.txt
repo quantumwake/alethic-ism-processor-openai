@@ -1,0 +1,9 @@
+{query}
+
+```json
+{
+    "response": "[response text to query, in text format only]",
+    "justification": "[short justification for your response]"
+}
+```
+

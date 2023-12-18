@@ -1,0 +1,7 @@
+{
+  "name": "test_template_P1_user",
+  "parameters": [
+    "query"
+  ],
+  "template_content_file": "test_template_P1_user.txt"
+}

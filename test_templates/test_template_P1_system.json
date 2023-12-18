@@ -1,0 +1,7 @@
+{
+  "name": "test_template_P1_system",
+  "parameters": [
+    "query"
+  ],
+  "template_content": "Only respond in text format for fields: response and justification."
+}
