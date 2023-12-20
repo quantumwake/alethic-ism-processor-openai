@@ -6,7 +6,6 @@ import dotenv
 import pulsar
 import asyncio
 
-from core.processor_state import State
 from db.model import ProcessorState, ProcessorStatus
 from db.processor_state_db import ProcessorStateDatabaseStorage
 from pydantic import ValidationError
@@ -14,6 +13,8 @@ from processor_question_answer import OpenAIQuestionAnswerProcessor
 from logger import logging
 
 dotenv.load_dotenv()
+
+logging.info('starting up pulsar consumer for openai state processor.')
 
 # pulsar/kafka related
 MSG_URL = os.environ.get("MSG_URL", "pulsar://localhost:6650")

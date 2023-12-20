@@ -16,7 +16,7 @@ from openai import OpenAI
 
 dotenv.load_dotenv()
 
-database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:postgres1@localhost:5432/postgres')
+# database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:postgres1@localhost:5432/postgres')
 openai_api_key = os.environ.get('OPENAI_API_KEY', None)
 openai.api_key = openai_api_key
 
