@@ -6,7 +6,8 @@ import dotenv
 import pulsar
 import asyncio
 
-from db.model import ProcessorState, ProcessorStatus
+from core.processor_state import ProcessorStatus
+from core.processor_state_storage import ProcessorState
 from db.processor_state_db import ProcessorStateDatabaseStorage
 from pydantic import ValidationError
 from processor_question_answer import OpenAIQuestionAnswerProcessor
@@ -56,6 +57,7 @@ async def execute(processor_state: ProcessorState):
     # process the input state
     processor = OpenAIQuestionAnswerProcessor(
         state=output_state,
+        storage=state_storage,
         processor_state=processor_state
     )
 

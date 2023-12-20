@@ -1,4 +1,3 @@
-import logging as log
 from typing import List
 
 import os.path
@@ -6,17 +5,15 @@ import openai
 import dotenv
 from core.base_processor import BaseProcessor, ThreadQueueManager
 from core.base_question_answer_processor import BaseQuestionAnswerProcessor
-from core.processor_state import State, StateConfigLM, StateDataKeyDefinition, StateConfig
+from core.processor_state import State, ProcessorStatus
+from core.processor_state_storage import ProcessorStateStorage, ProcessorState
 from core.utils.general_utils import parse_response
-from db.model import ProcessorState, ProcessorStatus
-from db.processor_state_db import ProcessorStateDatabaseStorage, create_state_id_by_config
 from tenacity import retry, wait_exponential, wait_random, retry_if_not_exception_type
-from logger import logging
+from logger import log
 from openai import OpenAI
 
 dotenv.load_dotenv()
 
-# database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:postgres1@localhost:5432/postgres')
 openai_api_key = os.environ.get('OPENAI_API_KEY', None)
 openai.api_key = openai_api_key
 
@@ -39,13 +36,14 @@ class BaseQuestionAnswerProcessorDatabaseStorage(BaseQuestionAnswerProcessor):
                  state: State,
                  processor_state: ProcessorState,
                  processors: List[BaseProcessor] = None,
+                 storage: ProcessorStateStorage = None,
                  *args, **kwargs):
 
         super().__init__(state=state, processors=processors, **kwargs)
 
         self.manager = ThreadQueueManager(num_workers=10, processor=self)
         self.processor_state = processor_state
-        self.storage = ProcessorStateDatabaseStorage(database_url=database_url)
+        self.storage = storage
         logging.info(f'extended instruction state machine: {type(self)} with config {self.config}')
 
     def pre_state_apply(self, query_state: dict):
@@ -118,61 +116,3 @@ class OpenAIQuestionAnswerProcessor(BaseQuestionAnswerProcessorDatabaseStorage):
         raw_response = stream.choices[0].message.content
         return parse_response(raw_response=raw_response)
 
-
-if __name__ == "__main__":
-
-    # build a mock input state
-    test_state = State(
-        config=StateConfig(
-            name="Processor Question Answer OpenAI (Test)",
-            version="Test Version 0.0",
-            primary_key=[
-                StateDataKeyDefinition(name="query"),
-                StateDataKeyDefinition(name="animal")
-            ]
-        )
-    )
-
-    test_queries = [
-        {"query": "tell me about cats.", "animal": "cat"},
-        {"query": "tell me about pigs.", "animal": "pig"},
-        {"query": "what is a cat?", "animal": "cat"},
-        {"query": "what is a pig?", "animal": "pig"}
-    ]
-
-    # apply the data to the mock input state
-    for test_query in test_queries:
-        test_state.apply_columns(test_query)
-        test_state.apply_row_data(test_query)
-
-    # persist the mocked input state into the database
-    test_storage = ProcessorStateDatabaseStorage(database_url=database_url)
-    test_storage.save_state(state=test_state)
-
-    # reload the newly persisted state, for testing purposes
-    test_state_id = create_state_id_by_config(config=test_state.config)
-    test_state = test_storage.load_state(state_id=test_state_id)
-
-    # process the input state
-    test_processor = OpenAIQuestionAnswerProcessor(
-        state=State(
-            config=StateConfigLM(
-                name="Processor Question Answer OpenAI (Test Response State)",
-                version="Test Version 0.0",
-                model_name="gpt-4-1106-preview",
-                provider_name="OpenAI",
-                storage_class="database",
-                primary_key=[
-                    StateDataKeyDefinition(name="query"),
-                    StateDataKeyDefinition(name="animal")
-                ],
-                query_state_inheritance=[
-                    StateDataKeyDefinition(name="query", alias="response_query"),
-                    StateDataKeyDefinition(name="animal", alias="animal")
-                ],
-                user_template_path="./test_templates/test_template_P1_user.json",
-                system_template_path="./test_templates/test_template_P1_system.json",
-            )
-        )
-    )
-    test_processor(input_state=test_state)
