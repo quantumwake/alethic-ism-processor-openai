@@ -18,6 +18,7 @@ openai_api_key = os.environ.get('OPENAI_API_KEY', None)
 openai.api_key = openai_api_key
 
 logging = log.getLogger(__name__)
+logging.info(f'**** OPENAI API KEY (last 4 chars): {openai_api_key[-4:]} ****')
 
 
 class BaseQuestionAnswerProcessorDatabaseStorage(BaseQuestionAnswerProcessor):
