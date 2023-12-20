@@ -1,0 +1,14 @@
+name: alethic-ism-processor-openai
+channels:
+  - file:///app/conda/env/local_channel
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - python-dotenv
+  - psycopg2
+  - pyyaml
+  - pydantic
+  - alethic-ism-core
+  - alethic-ism-db

@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alethic-ism-processor-openai-deployment
+  namespace: alethic
+spec:
+  replicas: 1 
+  selector:
+    matchLabels:
+      app: alethic-ism-processor-openai
+  template:
+    metadata:
+      labels:
+        app: alethic-ism-processor-openai
+    spec:
+      containers:
+      - name: alethic-ism-processor-openai
+        image: <IMAGE>
+        envFrom:
+        - secretRef:
+            name: alethic-ism-processor-openai-secrets
+        imagePullPolicy: Always
+      imagePullSecrets:
+      - name: regcred

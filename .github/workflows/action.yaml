@@ -1,0 +1,92 @@
+name: Docker Image CI for Workload API
+
+on:
+  push:
+    branches: [ "main" ]
+
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  build-push-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Checkout Workload API code
+      id: code_checkout
+      uses: actions/checkout@v3
+
+    - name: Assign Environment Variables for Build & Deployment Process
+      id: setup_variables
+
+      run: |
+        COMMIT_ID=$(echo $GITHUB_SHA | head -c7)
+        TAG="krasaee/alethic-ism-processor-openai:$COMMIT_ID"
+
+        echo "COMMIT_ID=$COMMIT_ID" >> "$GITHUB_ENV" # for local variables
+        echo "TAG=$TAG" >> "$GITHUB_ENV" # for local variables
+
+    - name: Build container image
+      id: build_docker_image
+      run: |
+        echo "COMMIT ID: $COMMIT_ID"
+        echo "DOCKER TAG: $TAG"
+        
+        # fetch custom conda modules
+        AUTH_HEADER="Authorization: token ${{ secrets.ALETHIC_GITHUB_ACTION_PACKAGE_ACCESS_TOKEN }}"
+
+        # Fetch artifacts list from GitHub API and use jq to parse the JSON and find the artifact that matches the pattern
+        ARTIFACTS_JSON=$(curl -s "https://api.github.com/repos/quantumwake/alethic-ism-core/actions/artifacts")
+        ARTIFACT_NAME=$(echo $ARTIFACTS_JSON | jq -r '.artifacts[] | select(.name | test("alethic-ism-core_*.*.*_*.tar.gz")) | .name')
+        ARTIFACT_DOWNLOAD_URL=$(echo $ARTIFACTS_JSON | jq -r ".artifacts[] | select(.name == \"$ARTIFACT_NAME\") | .archive_download_url")
+        curl -H "$AUTH_HEADER" -L $ARTIFACT_DOWNLOAD_URL -o artifact_core.zip
+        unzip artifact_core.zip
+
+        # Fetch artifacts list from GitHub API and use jq to parse the JSON and find the artifact that matches the pattern
+        ARTIFACTS_JSON=$(curl -s "https://api.github.com/repos/quantumwake/alethic-ism-db/actions/artifacts")
+        ARTIFACT_NAME=$(echo $ARTIFACTS_JSON | jq -r '.artifacts[] | select(.name | test("alethic-ism-db_*.*.*_*.tar.gz")) | .name')
+        ARTIFACT_DOWNLOAD_URL=$(echo $ARTIFACTS_JSON | jq -r ".artifacts[] | select(.name == \"$ARTIFACT_NAME\") | .archive_download_url")
+        curl -H "$AUTH_HEADER" -L $ARTIFACT_DOWNLOAD_URL -o artifact_db.zip
+        unzip artifact_db.zip
+
+        # build the docker image
+        echo "Building with the fully qualified registry tag $TAG"
+        ./docker_build_conda_package.sh $TAG
+  
+        # pass the tag to the next step
+        echo "TAG=$TAG" >> "$GITHUB_ENV" # for local variables
+
+    - name: Login to Docker Hub
+      id: dockerhub_login
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Push container image to Docker Hub Container Registry
+      id: push_docker_image
+      run: |
+        echo "Pushing container file with tag $TAG"
+        docker push $TAG
+
+    - name: Update deployment file
+      run: |
+        echo "Updating deployment file with tag $TAG"
+        sed -i "s|<IMAGE>|$TAG|" $GITHUB_WORKSPACE/k8s/deployment.yaml
+        cat $GITHUB_WORKSPACE/k8s/deployment.yaml
+
+    - name: Install doctl
+      uses: digitalocean/action-doctl@v2
+      with:
+        token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+    - name: Save DigitalOcean kubeconfig with short-lived credentials
+      run: doctl kubernetes cluster kubeconfig save --expiry-seconds 600 qwake-k8s-cluster
+
+    - name: Deploy to DigitalOcean Kubernetes
+      run: kubectl apply -f $GITHUB_WORKSPACE/k8s/deployment.yaml
+
+    - name: Verify deployment
+      run: kubectl rollout status deployment/alethic-ism-processor-openai-deployment
