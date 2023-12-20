@@ -68,5 +68,5 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["entrypoint.sh"]
 
 # Run the pulsar consumer (ism processor for openai)
-CMD ["python", "main:app"]
+CMD ["python", "main.py"]
 
