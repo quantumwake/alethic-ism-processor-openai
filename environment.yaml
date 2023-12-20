@@ -10,5 +10,7 @@ dependencies:
   - psycopg2
   - pyyaml
   - pydantic
+  - openai
+  - tenacity
   - alethic-ism-core
   - alethic-ism-db
