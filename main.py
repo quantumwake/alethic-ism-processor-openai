@@ -130,6 +130,7 @@ async def qa_topic_consumer():
 
 
 def graceful_shutdown(signum, frame):
+    global RUNNING
     print("Received SIGTERM signal. Gracefully shutting down.")
     RUNNING = False
 
