@@ -39,16 +39,17 @@ jobs:
 
         # Fetch artifacts list from GitHub API and use jq to parse the JSON and find the artifact that matches the pattern
         ARTIFACTS_JSON=$(curl -s "https://api.github.com/repos/quantumwake/alethic-ism-core/actions/artifacts")
-        ARTIFACT_NAME=$(echo $ARTIFACTS_JSON | jq -r '[.artifacts[] | {name: .name, created_at: .created_at}] | sort_by(.created_at) | reverse[0] | .name' )
-#        ARTIFACT_NAME=$(echo $ARTIFACTS_JSON | jq -r '.artifacts[] | select(.name | test("alethic-ism-core_*.*.*_*.tar.gz")) | .name')
+        ARTIFACT_NAME=$(echo $ARTIFACTS_JSON | jq -r '[.artifacts[] | {name: .name, created_at: .created_at}] | sort_by(.created_at) | reverse[0] | .name' )        
+        #ARTIFACT_NAME=$(echo $ARTIFACTS_JSON | jq -r '.artifacts[] | select(.name | test("alethic-ism-core_*.*.*_*.tar.gz")) | .name')
         ARTIFACT_DOWNLOAD_URL=$(echo $ARTIFACTS_JSON | jq -r ".artifacts[] | select(.name == \"$ARTIFACT_NAME\") | .archive_download_url")
+        
         curl -H "$AUTH_HEADER" -L $ARTIFACT_DOWNLOAD_URL -o artifact_core.zip
         unzip artifact_core.zip
 
         # Fetch artifacts list from GitHub API and use jq to parse the JSON and find the artifact that matches the pattern
         ARTIFACTS_JSON=$(curl -s "https://api.github.com/repos/quantumwake/alethic-ism-db/actions/artifacts")
         ARTIFACT_NAME=$(echo $ARTIFACTS_JSON | jq -r '[.artifacts[] | {name: .name, created_at: .created_at}] | sort_by(.created_at) | reverse[0] | .name' )
-#        ARTIFACT_NAME=$(echo $ARTIFACTS_JSON | jq -r '.artifacts[] | select(.name | test("alethic-ism-db_*.*.*_*.tar.gz")) | .name')
+        #ARTIFACT_NAME=$(echo $ARTIFACTS_JSON | jq -r '.artifacts[] | select(.name | test("alethic-ism-db_*.*.*_*.tar.gz")) | .name')
         ARTIFACT_DOWNLOAD_URL=$(echo $ARTIFACTS_JSON | jq -r ".artifacts[] | select(.name == \"$ARTIFACT_NAME\") | .archive_download_url")
         curl -H "$AUTH_HEADER" -L $ARTIFACT_DOWNLOAD_URL -o artifact_db.zip
         unzip artifact_db.zip
