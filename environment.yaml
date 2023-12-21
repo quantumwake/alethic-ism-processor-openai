@@ -5,11 +5,12 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.10
+  - python=3.11
   - python-dotenv
   - psycopg2
   - pyyaml
   - pydantic
+  - pydantic-core
   - openai
   - tenacity
   - alethic-ism-core

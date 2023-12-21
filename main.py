@@ -35,7 +35,8 @@ processor_consumer = client.subscribe(MSG_TOPIC, MSG_TOPIC_SUBSCRIPTION)
 management_consumer = client.subscribe(MSG_MANAGE_TOPIC, MSG_TOPIC_SUBSCRIPTION)
 
 # state storage
-state_storage = ProcessorStateDatabaseStorage(database_url=STATE_DATABASE_URL)
+state_storage = ProcessorStateDatabaseStorage(database_url=STATE_DATABASE_URL,
+                                              incremental=True)
 
 
 def close(consumer):
