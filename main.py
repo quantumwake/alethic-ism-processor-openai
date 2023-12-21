@@ -8,7 +8,7 @@ import asyncio
 
 from core.processor_state import ProcessorStatus
 from core.processor_state_storage import ProcessorState
-from db.processor_state_db import ProcessorStateDatabaseStorage
+from db.processor_state_db_storage import ProcessorStateDatabaseStorage
 from pydantic import ValidationError
 from processor_question_answer import OpenAIQuestionAnswerProcessor
 from logger import logging
@@ -38,14 +38,8 @@ management_consumer = client.subscribe(MSG_MANAGE_TOPIC, MSG_TOPIC_SUBSCRIPTION)
 state_storage = ProcessorStateDatabaseStorage(database_url=STATE_DATABASE_URL)
 
 
-def close_producer():
-    pass
-    # producer.close()
-
-
 def close(consumer):
     consumer.close()
-
 
 async def execute(processor_state: ProcessorState):
     input_state = state_storage.load_state(processor_state.input_state_id)
