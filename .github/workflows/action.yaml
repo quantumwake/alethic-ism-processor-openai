@@ -92,4 +92,4 @@ jobs:
       run: kubectl apply -f $GITHUB_WORKSPACE/k8s/deployment.yaml
 
     - name: Verify deployment
-      run: kubectl rollout status deployment/alethic-ism-processor-openai-deployment
+      run: kubectl rollout status deployment/alethic-ism-processor-openai-deployment -n alethic
