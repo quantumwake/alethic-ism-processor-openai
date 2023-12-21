@@ -3,6 +3,9 @@ from typing import List
 import os.path
 import openai
 import dotenv
+from core.base_processor import ThreadQueueManager, BaseProcessor
+from core.processor_state import State
+from core.processor_state_storage import ProcessorState, ProcessorStateStorage
 from core.utils.general_utils import parse_response
 from db.processor_state_db import BaseQuestionAnswerProcessorDatabaseStorage
 from tenacity import retry, wait_exponential, wait_random, retry_if_not_exception_type
@@ -20,6 +23,21 @@ logging.info(f'**** OPENAI API KEY (last 4 chars): {openai_api_key[-4:]} ****')
 
 
 class OpenAIQuestionAnswerProcessor(BaseQuestionAnswerProcessorDatabaseStorage):
+
+    def __init__(self,
+                 state: State,
+                 processor_state: ProcessorState,
+                 processors: List[BaseProcessor] = None,
+                 storage: ProcessorStateStorage = None,
+                 *args, **kwargs):
+
+        super().__init__(state=state,
+                         storage=storage,
+                         processor_state=processor_state,
+                         processors=processors, **kwargs)
+
+        self.manager = ThreadQueueManager(num_workers=10, processor=self)
+
 
     @retry(
         retry=retry_if_not_exception_type(SyntaxError),

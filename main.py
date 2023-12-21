@@ -34,13 +34,18 @@ client = pulsar.Client(MSG_URL)
 processor_consumer = client.subscribe(MSG_TOPIC, MSG_TOPIC_SUBSCRIPTION)
 management_consumer = client.subscribe(MSG_MANAGE_TOPIC, MSG_TOPIC_SUBSCRIPTION)
 
-# state storage
-state_storage = ProcessorStateDatabaseStorage(database_url=STATE_DATABASE_URL,
-                                              incremental=True)
+#
+# state storage specifically to handle this processor state (stateless obj)
+#
+state_storage = ProcessorStateDatabaseStorage(
+    database_url=STATE_DATABASE_URL,
+    incremental=True
+)
 
 
 def close(consumer):
     consumer.close()
+
 
 async def execute(processor_state: ProcessorState):
     input_state = state_storage.load_state(processor_state.input_state_id)
