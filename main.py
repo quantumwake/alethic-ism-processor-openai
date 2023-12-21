@@ -103,7 +103,6 @@ async def qa_topic_consumer():
                 input_state_id=processor_state.input_state_id,
                 output_state_id=processor_state.output_state_id
             )
-
             if processor_state.status in [ProcessorStatus.QUEUED, ProcessorStatus.RUNNING]:
                 await execute(processor_state=processor_state)
             else:

@@ -25,13 +25,17 @@ class BaseQuestionAnswerProcessorDatabaseStorage(BaseQuestionAnswerProcessor):
 
     @property
     def user_template(self):
-        template = self.storage.fetch_template(self.user_template_path)
-        return template.template_content
+        if self.user_template_path:
+            template = self.storage.fetch_template(self.user_template_path)
+            return template.template_content
+        return None
 
     @property
     def system_template(self):
-        template = self.storage.fetch_template(self.system_template_path)
-        return template.template_content
+        if self.system_template_path:
+            template = self.storage.fetch_template(self.system_template_path)
+            return template.template_content
+        return None
 
     def __init__(self,
                  state: State,
