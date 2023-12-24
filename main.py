@@ -83,6 +83,9 @@ async def qa_topic_management_consumer():
                 ProcessorStatus.TERMINATED,
                 ProcessorStatus.STOPPED]:
                 logging.info(f'terminating processor_state: {processor_state}')
+                # TODO update the state, ensure that the state information is properly set, 
+                #  do not forward the msg unless the state has been terminated.
+            
             else:
                 logging.info(f'nothing to do for processor_state: {processor_state}')
         except Exception as e:
@@ -96,6 +99,8 @@ async def qa_topic_consumer():
             data = msg.data().decode("utf-8")
             logging.info(f'Message received with {data}')
 
+            # TODO check whether the message is for the appropriate processor
+            
             # the configuration of the state
             processor_state = ProcessorState.model_validate_json(data)
             processor_state = state_storage.fetch_processor_states_by(
