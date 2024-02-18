@@ -1,4 +1,4 @@
-name: Docker Image CI for Workload API
+name: Docker Image CI for OpenAI Processor (Consumer)
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
 
     steps:
 
-    - name: Checkout Workload API code
+    - name: Checkout Processor Code
       id: code_checkout
       uses: actions/checkout@v3
 
