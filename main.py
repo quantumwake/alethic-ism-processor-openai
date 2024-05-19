@@ -1,28 +1,4 @@
-# The Alethic Instruction-Based State Machine (ISM) is a versatile framework designed to 
-# efficiently process a broad spectrum of instructions. Initially conceived to prioritize
-# animal welfare, it employs language-based instructions in a graph of interconnected
-# processing and state transitions, to rigorously evaluate and benchmark AI models
-# apropos of their implications for animal well-being. 
-# 
-# This foundation in ethical evaluation sets the stage for the framework's broader applications,
-# including legal, medical, multi-dialogue conversational systems.
-# 
-# Copyright (C) 2023 Kasra Rasaee, Sankalpa Ghose, Yip Fai Tse (Alethic Research) 
-# 
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as
-# published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
-# 
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-# 
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
-# 
-# 
+import json
 import os
 import signal
 import sys
@@ -31,15 +7,13 @@ import dotenv
 import pulsar
 import asyncio
 
-from core.processor_state import ProcessorStatus
-from core.processor_state_storage import ProcessorState
-from db.processor_state_db_storage import ProcessorStateDatabaseStorage
+from core.base_model import ProcessorStateDirection
+from db.processor_state_db_storage import PostgresDatabaseStorage
 from pydantic import ValidationError
 from processor_question_answer import OpenAIQuestionAnswerProcessor
 from logger import logging
 
 dotenv.load_dotenv()
-
 logging.info('starting up pulsar consumer for openai state processor.')
 
 # pulsar/kafka related
@@ -59,10 +33,8 @@ client = pulsar.Client(MSG_URL)
 processor_consumer = client.subscribe(MSG_TOPIC, MSG_TOPIC_SUBSCRIPTION)
 management_consumer = client.subscribe(MSG_MANAGE_TOPIC, MSG_TOPIC_SUBSCRIPTION)
 
-#
 # state storage specifically to handle this processor state (stateless obj)
-#
-state_storage = ProcessorStateDatabaseStorage(
+state_storage = PostgresDatabaseStorage(
     database_url=STATE_DATABASE_URL,
     incremental=True
 )
@@ -72,71 +44,131 @@ def close(consumer):
     consumer.close()
 
 
-async def execute(processor_state: ProcessorState):
-    input_state = state_storage.load_state(processor_state.input_state_id)
-    output_state = state_storage.load_state(processor_state.output_state_id)
-    processor_info = state_storage.fetch_processor(
-        processor_id=processor_state.processor_id
-    )
+async def execute(message_dict: dict):
+    message_type = message_dict['type']
+    if message_type != 'query_state':
+        raise NotImplemented(f'unsupported message type: {message_type}')
 
-    # process the input state
-    processor = OpenAIQuestionAnswerProcessor(
-        state=output_state,
-        storage=state_storage,
-        processor_state=processor_state
-    )
+    processor_id = message_dict['processor_id']
+    provider_id = message_dict['provider_id']
+
+    # fetch provider details to identify the model version
+    provider = state_storage.fetch_processor_provider(id=provider_id)
+
+    # fetch the processors to forward the state query to, state must be an input of the state id
+    output_states = state_storage.fetch_processor_state(processor_id=processor_id,
+                                                        direction=ProcessorStateDirection.OUTPUT)
+
+    if not output_states:
+        raise BrokenPipeError(f'no output state found for processor id: {processor_id} provider {provider_id}')
+
+    # fetch query state input entries
+    query_states = message_dict['query_state']
+
+    logging.info(f'found {len(output_states)} on processor id {processor_id} with provider {provider_id}')
+
+    for state in output_states:
+        # load the output state and relevant state instruction
+        output_state = state_storage.load_state(state_id=state.state_id, load_data=False)
+
+        logging.info(f'creating processor provider {processor_id} on output state id {state.state_id} with '
+                     f'current index: {state.current_index}, '
+                     f'maximum processed index: {state.maximum_index}, '
+                     f'count: {state.count}')
+
+        # create (or fetch cached state) processoring handling this state output instruction
+        processor = OpenAIQuestionAnswerProcessor(
+            output_state=output_state,
+            provider=provider,
+            state_machine_storage=state_storage,
+        )
+
+        # iterate each query state entry and forward it to the processor
+        if isinstance(query_states, dict):
+            logging.debug(f'submitting single query state entry count: solo, '
+                          f'with processor_id: {processor_id}, '
+                          f'provider_id: {provider_id}')
+
+            processor.process_input_data_entry(input_query_state=query_states)
+        elif isinstance(query_states, list):
+            logging.debug(f'submitting batch query state entries count: {len(query_states)}, '
+                          f'with processor_id: {processor_id}, '
+                          f'provider_id: {provider_id}')
+
+            # iterate each individual entry and submit
+            # TODO modify to submit as a batch?? although this consumer should be handling 1 request
+            for query_state_entry in query_states:
+                processor.process_input_data_entry(input_query_state=query_state_entry)
+        else:
+            raise NotImplemented('unsupported query state entry, it must be a Dict or a List[Dict] where Dict is a '
+                                 'key value pair of values, defining a single row and a column per key entry')
 
     try:
-        processor(input_state=input_state)
+        # processor.process_input_data_entry(input_query_state=input_query_state)
+        pass
     except Exception as exception:
-        processor_state.status = ProcessorStatus.FAILED
+        # processor_state.status = ProcessorStatus.FAILED
         logging.error(f'critical error {exception}')
     finally:
-        state_storage.update_processor_state(processor_state=processor_state)
+        pass
+        # state_storage.update_processor_state(processor_state=processor_state)
 
 
 async def qa_topic_management_consumer():
     while RUNNING:
+        msg = None
         try:
             msg = management_consumer.receive()
             data = msg.data().decode("utf-8")
             logging.info(f'Message received with {data}')
 
             # the configuration of the state
-            processor_state = ProcessorState.model_validate_json(data)
-            if processor_state.status in [
-                ProcessorStatus.TERMINATED,
-                ProcessorStatus.STOPPED]:
-                logging.info(f'terminating processor_state: {processor_state}')
-                # TODO update the state, ensure that the state information is properly set, 
-                #  do not forward the msg unless the state has been terminated.
-            
-            else:
-                logging.info(f'nothing to do for processor_state: {processor_state}')
+            # processor_state = ProcessorState.model_validate_json(data)
+            # if processor_state.status in [
+            #     ProcessorStatus.TERMINATED,
+            #     ProcessorStatus.STOPPED]:
+            #     logging.info(f'terminating processor_state: {processor_state}')
+            # TODO update the state, ensure that the state information is properly set,
+            #  do not forward the msg unless the state has been terminated.
+
+            # else:
+            #     logging.info(f'nothing to do for processor_state: {processor_state}')
         except Exception as e:
             logging.error(e)
+        finally:
+            management_consumer.acknowledge(msg)
 
 
-async def qa_topic_consumer():
+async def topic_consumer():
     while RUNNING:
         try:
             msg = processor_consumer.receive()
             data = msg.data().decode("utf-8")
             logging.info(f'Message received with {data}')
 
+            # TODO change this to a model object
+            message_dict = json.loads(data)
+
+            if 'type' not in message_dict:
+                raise ValidationError(f'unable to identity type for consumed message {data}')
+
+            await execute(message_dict)
+
+            # if 'state_id' not in message_dict:
+
             # TODO check whether the message is for the appropriate processor
-            
+
             # the configuration of the state
-            processor_state = ProcessorState.model_validate_json(data)
-            processor_state = state_storage.fetch_processor_states_by(
-                processor_id=processor_state.processor_id,
-                input_state_id=processor_state.input_state_id,
-                output_state_id=processor_state.output_state_id
-            )
-            if processor_state.status in [ProcessorStatus.QUEUED, ProcessorStatus.RUNNING]:
-                await execute(processor_state=processor_state)
-            else:
-                logging.error(f'status not in QUEUED, unable to processor state: {processor_state}  ')
+            # processor_state = ProcessorState.model_validate_json(data)
+            # processor_state = state_storage.fetch_processor_states_by(
+            #     processor_id=processor_state.processor_id,
+            #     input_state_id=processor_state.input_state_id,
+            #     output_state_id=processor_state.output_state_id
+            # )
+            # if processor_state.status in [ProcessorStatus.QUEUED, ProcessorStatus.RUNNING]:
+            #     await execute(processor_state=processor_state)
+            # else:
+            #     logging.error(f'status not in QUEUED, unable to processor state: {processor_state}  ')
 
             # send ack that the message was consumed.
             processor_consumer.acknowledge(msg)
@@ -170,4 +202,4 @@ def graceful_shutdown(signum, frame):
 signal.signal(signal.SIGTERM, graceful_shutdown)
 
 if __name__ == '__main__':
-    asyncio.run(qa_topic_consumer())
+    asyncio.run(topic_consumer())

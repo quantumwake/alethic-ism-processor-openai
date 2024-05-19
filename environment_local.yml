@@ -1,0 +1,18 @@
+name: alethic-ism-processor-openai
+channels:
+  - file:///Users/kasrarasaee/miniconda3/envs/local_channel
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - python-dotenv
+  - pulsar-client
+  - psycopg2
+  - pyyaml
+  - pydantic
+  - pydantic-core
+  - openai
+  - tenacity
+  - alethic-ism-core
+  - alethic-ism-db

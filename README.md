@@ -2,6 +2,13 @@
 
 The following processor waits on events from pulsar (but can be extended to use kafka or any pub/sub system)
 
+# Installation via conda
+Checkout the ISM core and ISM db repository and build for  
+- * modify the environment_local.yml to reflect your environment path for the ISM core and ISM db packages.
+- 
+- conda env create -f environment_local.yml  
+- conda activate alethic-ism-processor-openai
+
 # Installation
 - conda install pulsar-client
 - conda install pydantic
