@@ -25,11 +25,11 @@ ROUTING_FILE = os.environ.get("ROUTING_FILE", '.routing.yaml')
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
 
 # database related
-STATE_DATABASE_URL = os.environ.get("STATE_DATABASE_URL", "postgresql://postgres:postgres1@localhost:5432/postgres")
+DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:postgres1@localhost:5432/postgres")
 
 # state storage specifically to handle this processor state (stateless obj)
 storage = PostgresDatabaseStorage(
-    database_url=STATE_DATABASE_URL,
+    database_url=DATABASE_URL,
     incremental=True
 )
 
