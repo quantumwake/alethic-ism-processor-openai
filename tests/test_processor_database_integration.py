@@ -29,7 +29,7 @@ from core.processor_state import State, StateConfig, StateDataKeyDefinition, Sta
 from db.misc_utils import create_state_id_by_config
 from db.processor_state_db import ProcessorStateDatabaseStorage
 
-from processor_question_answer import OpenAIQuestionAnswerProcessor
+from processor_question_answer import OpenAIChatCompletionProcessor
 
 test_state_database_url = os.environ.get("STATE_DATABASE_URL", "postgresql://postgres:postgres1@localhost:5432/postgres")
 
@@ -69,7 +69,7 @@ def test_processor_database_state_storage_integration():
     test_state = test_storage.load_state(state_id=test_state_id)
 
     # process the input state
-    test_processor = OpenAIQuestionAnswerProcessor(
+    test_processor = OpenAIChatCompletionProcessor(
         state=State(
             config=StateConfigLM(
                 name="Processor Question Answer OpenAI (Test Response State)",

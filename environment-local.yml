@@ -14,5 +14,6 @@ dependencies:
   - pydantic-core
   - openai
   - tenacity
+  - restrictedpython
   - alethic-ism-core
   - alethic-ism-db

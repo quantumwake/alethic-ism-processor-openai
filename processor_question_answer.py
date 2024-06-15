@@ -2,14 +2,14 @@ import json
 import os.path
 import openai
 import dotenv
-from core.base_message_router import Router
-
-from core.utils.general_utils import parse_response
-from db.base_db_storage_processor_lm import BaseDatabaseStorageProcessorLM
-from tenacity import retry, wait_exponential, wait_random, retry_if_not_exception_type
+from core.base_message_provider import Monitorable
+from core.base_message_route_model import Route
+from core.base_processor_lm import BaseProcessorLM
 
 from logger import log
 from openai import OpenAI
+from core.base_message_router import Router
+from core.utils.general_utils import parse_response
 
 dotenv.load_dotenv()
 
@@ -20,17 +20,14 @@ logging = log.getLogger(__name__)
 logging.info(f'**** OPENAI API KEY (last 4 chars): {openai_api_key[-4:]} ****')
 
 
-# routing the persistence of individual state entries to the state sync store topic
-router = Router(
-    yaml_file="routing.yaml"
-)
+class OpenAIChatCompletionProcessor(BaseProcessorLM):
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
-class OpenAIQuestionAnswerProcessor(BaseDatabaseStorageProcessorLM):
+    # async def process_input_data_entry(self, input_query_state: dict, force: bool = False):
+    #     return []
 
-    @retry(
-        retry=retry_if_not_exception_type(SyntaxError),
-        wait=wait_exponential(multiplier=1, min=4, max=10) + wait_random(0, 2))
     def _execute(self, user_prompt: str, system_prompt: str, values: dict):
         messages_dict = []
 
@@ -64,13 +61,13 @@ class OpenAIQuestionAnswerProcessor(BaseDatabaseStorageProcessorLM):
         return parse_response(raw_response=raw_response)
 
     def apply_states(self, query_states: [dict]):
-        route = router.find_router('state/sync/store')
-
         route_message = {
+            "processor_id": self.processor.id,
+            "provider_id": self.provider.id,
             "state_id": self.output_state.id,
             "type": "query_state_list",
             "query_state_list": query_states
         }
 
-        route.send_message(json.dumps(route_message))
+        self.sync_store_route.send_message(json.dumps(route_message))
         return query_states
