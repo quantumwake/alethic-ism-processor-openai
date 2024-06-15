@@ -13,12 +13,32 @@ spec:
       labels:
         app: alethic-ism-processor-openai
     spec:
+      volumes:
+        - name: alethic-ism-processor-openai-secret-config-volume
+          secret:
+            secretName: alethic-ism-processor-openai-secret
+            items:
+              - key: .routing.yaml
+                path: .routing.yaml
       containers:
       - name: alethic-ism-processor-openai
         image: <IMAGE>
-        envFrom:
-        - secretRef:
-            name: alethic-ism-processor-openai-secrets
         imagePullPolicy: Always
+        volumeMounts:
+          - name: alethic-ism-processor-openai-secret-config-volume
+            mountPath: /app/repo/.routing.yaml
+            subPath: .routing.yaml
+            readOnly: true
+        env:
+          - name: DATABASE_URL
+            valueFrom:
+              secretKeyRef:
+                name: alethic-ism-processor-openai-secret
+                key: DATABASE_URL
+          - name: OPENAI_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: alethic-ism-processor-openai-secret
+                key: OPENAI_API_KEY
       imagePullSecrets:
       - name: regcred
