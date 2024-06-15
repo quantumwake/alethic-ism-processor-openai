@@ -30,11 +30,33 @@ spec:
             subPath: .routing.yaml
             readOnly: true
         env:
-          - name: DATABASE_URL
+          # Consumer Configuration for Pulsar
+          - name: MSG_URL
             valueFrom:
               secretKeyRef:
                 name: alethic-ism-processor-openai-secret
-                key: DATABASE_URL
+                key: MSG_URL
+
+          - name: MSG_TOPIC
+            valueFrom:
+              secretKeyRef:
+                name: alethic-ism-processor-openai-secret
+                key: MSG_TOPIC
+
+          - name: MSG_MANAGE_TOPIC
+            valueFrom:
+              secretKeyRef:
+                name: alethic-ism-processor-openai-secret
+                key: MSG_MANAGE_TOPIC
+
+          - name: MSG_TOPIC_SUBSCRIPTION
+            valueFrom:
+              secretKeyRef:
+                name: alethic-ism-processor-openai-secret
+                key: MSG_TOPIC_SUBSCRIPTION
+
+          # Primary OpenAI key
+
           - name: OPENAI_API_KEY
             valueFrom:
               secretKeyRef:
