@@ -22,7 +22,7 @@ MSG_TOPIC_SUBSCRIPTION = os.environ.get("MSG_TOPIC_SUBSCRIPTION", "ism_openai_qa
 #   processed and output needs to be routed to the connected edges/processors
 # )
 ROUTING_FILE = os.environ.get("ROUTING_FILE", '.routing.yaml')
-LOG_LEVEL = os.environ.get("LOG_LEVEL", logging.DEBUG)
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
 
 # database related
 STATE_DATABASE_URL = os.environ.get("STATE_DATABASE_URL", "postgresql://postgres:postgres1@localhost:5432/postgres")
