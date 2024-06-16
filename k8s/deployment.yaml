@@ -56,6 +56,11 @@ spec:
                 key: MSG_TOPIC_SUBSCRIPTION
 
           # Primary OpenAI key
+          - name: DATABASE_URL
+            valueFrom:
+              secretKeyRef:
+                name: alethic-ism-processor-openai-secret
+                key: DATABASE_URL
 
           - name: OPENAI_API_KEY
             valueFrom:
