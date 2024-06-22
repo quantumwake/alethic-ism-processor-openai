@@ -16,14 +16,15 @@ fi;
 
 echo "Using arch: $ARCH for image tag $TAG"
 
-echo "Identifying ISM Core and ISM DB libraries"
-conda_ism_core_path=$(find $CONDA_PACKAGE_PATH_ISM_CORE -type f -name "alethic-ism-core*.tar.gz")
+echo "Identifying ISM core library"
+conda_ism_core_path=$(ls -ltr $CONDA_PACKAGE_PATH_ISM_CORE/alethic-ism-core*.tar.gz | awk '{print $9}' | tail -n 1)
 conda_ism_core_path=$(basename $conda_ism_core_path)
-echo "Using Conda ISM Core Library Path: $conda_ism_core_path"
+echo "Using Conda ISM core library: $conda_ism_core_path"
 
-conda_ism_db_path=$(find $CONDA_PACKAGE_PATH_ISM_DB -type f -name "alethic-ism-db*.tar.gz")
+echo "Identifying ISM database library"
+conda_ism_db_path=$(ls -ltr $CONDA_PACKAGE_PATH_ISM_DB/alethic-ism-db*.tar.gz | awk '{print $9}' | tail -n 1)
 conda_ism_db_path=$(basename $conda_ism_db_path)
-echo "Using Conda ISM DB Library Path: $conda_ism_db_path"
+echo "Using Conda ISM database library: $conda_ism_db_path"
 
 if [ ! -z $conda_ism_db_path ] && [ ! -z $conda_ism_core_path ];
 then

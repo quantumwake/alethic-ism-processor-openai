@@ -62,9 +62,7 @@ class OpenAIChatCompletionProcessor(BaseProcessorLM):
 
     def apply_states(self, query_states: [dict]):
         route_message = {
-            "processor_id": self.processor.id,
-            "provider_id": self.provider.id,
-            "state_id": self.output_state.id,
+            "route_id": self.output_processor_state.id,
             "type": "query_state_list",
             "query_state_list": query_states
         }
