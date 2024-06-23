@@ -59,13 +59,3 @@ class OpenAIChatCompletionProcessor(BaseProcessorLM):
         # final raw response, without stripping or splitting
         raw_response = stream.choices[0].message.content
         return parse_response(raw_response=raw_response)
-
-    def apply_states(self, query_states: [dict]):
-        route_message = {
-            "route_id": self.output_processor_state.id,
-            "type": "query_state_list",
-            "query_state_list": query_states
-        }
-
-        self.sync_store_route.send_message(json.dumps(route_message))
-        return query_states
