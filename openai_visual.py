@@ -2,8 +2,7 @@ import os.path
 import openai
 import dotenv
 from core.base_processor_visual import BaseProcessorVisual
-
-from logger import log
+from core.utils.ismlogging import ism_logger
 from openai import OpenAI
 
 dotenv.load_dotenv()
@@ -11,7 +10,7 @@ dotenv.load_dotenv()
 openai_api_key = os.environ.get('OPENAI_API_KEY', None)
 openai.api_key = openai_api_key
 
-logging = log.getLogger(__name__)
+logging = ism_logger(__name__)
 logging.info(f'**** OPENAI API KEY (last 4 chars): {openai_api_key[-4:]} ****')
 
 
@@ -23,7 +22,6 @@ class OpenAIVisualCompletionProcessor(BaseProcessorVisual):
     def _execute(self, template: str, values: dict):
         template = template.strip()
         client = OpenAI()
-
 
         response = client.images.generate(
             model=self.provider.version,

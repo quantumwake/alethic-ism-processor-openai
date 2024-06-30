@@ -8,9 +8,9 @@ from core.base_processor import StatePropagationProviderRouterStateSyncStore, St
 from core.processor_state import State
 from core.pulsar_message_producer_provider import PulsarMessagingProducerProvider
 from core.pulsar_messaging_provider import PulsarMessagingConsumerProvider
+from core.utils.ismlogging import ism_logger
 from db.processor_state_db_storage import PostgresDatabaseStorage
 
-from logger import logging
 from openai_lm import OpenAIChatCompletionProcessor
 from openai_visual import OpenAIVisualCompletionProcessor
 
@@ -25,7 +25,6 @@ MSG_TOPIC_SUBSCRIPTION = os.environ.get("MSG_TOPIC_SUBSCRIPTION", "ism_openai_qa
 #   processed and output needs to be routed to the connected edges/processors
 # )
 ROUTING_FILE = os.environ.get("ROUTING_FILE", '.routing.yaml')
-LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
 
 # database related
 DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:postgres1@localhost:5432/postgres")
@@ -63,6 +62,8 @@ state_propagation_provider = StatePropagationProviderDistributor(
     ]
 )
 
+logging = ism_logger(__name__)
+
 class MessagingConsumerOpenAI(BaseMessagingConsumerLM):
 
     def create_processor(self,
@@ -70,6 +71,8 @@ class MessagingConsumerOpenAI(BaseMessagingConsumerLM):
                          provider: ProcessorProvider,
                          output_processor_state: ProcessorState,
                          output_state: State):
+
+        logging.DEBUG(f"received create processor request {provider.class_name}")
 
         if provider.class_name == "NaturalLanguageProcessing":
 
