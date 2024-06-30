@@ -53,7 +53,7 @@ class OpenAIChatCompletionProcessor(BaseProcessorLM):
         stream = client.chat.completions.create(
             model=self.provider.version,
             messages=messages_dict,
-            stream=False,
+            stream=True,
         )
 
         # final raw response, without stripping or splitting

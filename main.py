@@ -11,7 +11,8 @@ from core.pulsar_messaging_provider import PulsarMessagingConsumerProvider
 from db.processor_state_db_storage import PostgresDatabaseStorage
 
 from logger import logging
-from processor_question_answer import OpenAIChatCompletionProcessor
+from openai_lm import OpenAIChatCompletionProcessor
+from openai_visual import OpenAIVisualCompletionProcessor
 
 dotenv.load_dotenv()
 MSG_URL = os.environ.get("MSG_URL", "pulsar://localhost:6650")
@@ -70,20 +71,39 @@ class MessagingConsumerOpenAI(BaseMessagingConsumerLM):
                          output_processor_state: ProcessorState,
                          output_state: State):
 
-        processor = OpenAIChatCompletionProcessor(
-            # storage class information
-            state_machine_storage=storage,
+        if provider.class_name == "NaturalLanguageProcessing":
 
-            # state processing information
-            output_state=output_state,
-            provider=provider,
-            processor=processor,
-            output_processor_state=output_processor_state,
+            processor = OpenAIChatCompletionProcessor(
+                # storage class information
+                state_machine_storage=storage,
 
-            # state information routing routers
-            monitor_route=self.monitor_route,
-            state_propagation_provider=state_propagation_provider
-        )
+                # state processing information
+                output_state=output_state,
+                provider=provider,
+                processor=processor,
+                output_processor_state=output_processor_state,
+
+                # state information routing routers
+                monitor_route=self.monitor_route,
+                state_propagation_provider=state_propagation_provider
+            )
+
+        elif provider.class_name == "ImageProcessing":
+
+            processor = OpenAIVisualCompletionProcessor(
+                # storage class information
+                state_machine_storage=storage,
+
+                # state processing information
+                output_state=output_state,
+                provider=provider,
+                processor=processor,
+                output_processor_state=output_processor_state,
+
+                # state information routing routers
+                monitor_route=self.monitor_route,
+                state_propagation_provider=state_propagation_provider
+            )
 
         return processor
 
