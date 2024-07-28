@@ -1,29 +1,31 @@
+import asyncio
 import os
-import dotenv
-from core.base_message_consumer_lm import BaseMessagingConsumerLM
-from core.base_message_router import Router
-from core.base_model import ProcessorProvider, Processor, ProcessorState, ProcessorStatusCode
-from core.base_processor import StatePropagationProviderRouterStateSyncStore, StatePropagationProviderDistributor, \
-    StatePropagationProviderRouterStateRouter
-from core.processor_state import State
-from core.pulsar_message_producer_provider import PulsarMessagingProducerProvider
-from core.pulsar_messaging_provider import PulsarMessagingConsumerProvider
-from core.utils.ismlogging import ism_logger
-from db.processor_state_db_storage import PostgresDatabaseStorage
+import random
 
+import dotenv
+from core.base_model import (
+    ProcessorProvider,
+    Processor,
+    ProcessorState
+)
+from core.base_processor import (
+    StatePropagationProviderRouterStateSyncStore,
+    StatePropagationProviderDistributor,
+    StatePropagationProviderRouterStateRouter
+)
+from core.messaging.base_message_consumer_processor import BaseMessageConsumerProcessor
+from core.messaging.base_message_router import Router
+from core.messaging.nats_message_provider import NATSMessageProvider
+from core.processor_state import State
+from core.utils.ismlogging import ism_logger
+
+from db.processor_state_db_storage import PostgresDatabaseStorage
 from openai_lm import OpenAIChatCompletionProcessor
 from openai_visual import OpenAIVisualCompletionProcessor
 
 dotenv.load_dotenv()
-MSG_URL = os.environ.get("MSG_URL", "pulsar://localhost:6650")
-MSG_TOPIC = os.environ.get("MSG_TOPIC", "ism_openai_qa")
-MSG_MANAGE_TOPIC = os.environ.get("MSG_MANAGE_TOPIC", "ism_openai_manage_topic")
-MSG_TOPIC_SUBSCRIPTION = os.environ.get("MSG_TOPIC_SUBSCRIPTION", "ism_openai_qa_subscription")
 
-# Message Routing File (
-#   Used for routing processed messages, e.g: input comes in,
-#   processed and output needs to be routed to the connected edges/processors
-# )
+# message routing file, used for both ingress and egress message handling
 ROUTING_FILE = os.environ.get("ROUTING_FILE", '.routing.yaml')
 
 # database related
@@ -35,36 +37,37 @@ storage = PostgresDatabaseStorage(
     incremental=True
 )
 
-messaging_provider = PulsarMessagingConsumerProvider(
-    message_url=MSG_URL,
-    message_topic=MSG_TOPIC,
-    message_topic_subscription=MSG_TOPIC_SUBSCRIPTION,
-    management_topic=MSG_MANAGE_TOPIC
-)
-
-# pulsar messaging provider is used, the routes are defined in the routing.yaml
-pulsar_provider = PulsarMessagingProducerProvider()
+# nats messaging provider is used, the routes are defined in the routing.yaml
+message_provider = NATSMessageProvider()
 
 # routing the persistence of individual state entries to the state sync store topic
 router = Router(
-    provider=pulsar_provider,
+    provider=message_provider,
     yaml_file=ROUTING_FILE
 )
 
 # find the monitor route for telemetry updates
-monitor_route = router.find_router("processor/monitor")
+monitor_route = router.find_route("processor/monitor")
+openai_route = router.find_route_by_subject("processor.models.openai")
+state_sync_route = router.find_route('processor/state/sync')
+state_router_route = router.find_route('processor/state/router')
 
 # state_router_route = router.find_router("processor/monitor")
 state_propagation_provider = StatePropagationProviderDistributor(
     propagators=[
-        StatePropagationProviderRouterStateSyncStore(route=router.find_router('state/sync/store')),
-        StatePropagationProviderRouterStateRouter(route=router.find_router('state/router'))
+        StatePropagationProviderRouterStateSyncStore(route=state_sync_route),
+        StatePropagationProviderRouterStateRouter(route=state_router_route)
     ]
 )
 
 logging = ism_logger(__name__)
 
-class MessagingConsumerOpenAI(BaseMessagingConsumerLM):
+
+class MessagingConsumerOpenAI(BaseMessageConsumerProcessor):
+
+    # def __init__(self, route: BaseRoute, monitor_route: BaseRoute):
+    #     BaseMessageConsumer.__init__(self, route=route)
+    #     MonitoredProcessorState.__init__(self, monitor_route=monitor_route)
 
     def create_processor(self,
                          processor: Processor,
@@ -72,7 +75,7 @@ class MessagingConsumerOpenAI(BaseMessagingConsumerLM):
                          output_processor_state: ProcessorState,
                          output_state: State):
 
-        logging.DEBUG(f"received create processor request {provider.class_name}")
+        logging.debug(f"received create processor request {provider.class_name}")
 
         if provider.class_name == "NaturalLanguageProcessing":
 
@@ -113,14 +116,18 @@ class MessagingConsumerOpenAI(BaseMessagingConsumerLM):
     # async def execute(self, consumer_message_mapping: dict):
     #     pass
 
-if __name__ == '__main__':
 
+if __name__ == '__main__':
     consumer = MessagingConsumerOpenAI(
-        name="MessagingConsumerOpenAI",
         storage=storage,
-        messaging_provider=messaging_provider,
+        route=openai_route,
         monitor_route=monitor_route
     )
 
+    # TODO think this through - important for workload creation. Here we randomly select a consumer number,
+    #  and hope it does not collide with another consumer; if it does, then the consumer will throw an error
+    #  and should exit, whereby next choosing a different number. Eventually, the consumer will find a spot.
+    consumer_no = random.randint(0, 20)     # this should be a workload identity subscription
+
     consumer.setup_shutdown_signal()
-    consumer.start_topic_consumer()
+    asyncio.get_event_loop().run_until_complete(consumer.start_consumer(consumer_no=consumer_no))

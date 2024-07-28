@@ -14,9 +14,9 @@ spec:
         app: alethic-ism-processor-openai
     spec:
       volumes:
-        - name: alethic-ism-processor-openai-secret-config-volume
+        - name: alethic-ism-routes-secret-volume
           secret:
-            secretName: alethic-ism-processor-openai-secret
+            secretName: alethic-ism-routes-secret
             items:
               - key: .routing.yaml
                 path: .routing.yaml
@@ -25,35 +25,23 @@ spec:
         image: <IMAGE>
         imagePullPolicy: Always
         volumeMounts:
-          - name: alethic-ism-processor-openai-secret-config-volume
+          - name: alethic-ism-routes-secret-volume
             mountPath: /app/repo/.routing.yaml
             subPath: .routing.yaml
             readOnly: true
         env:
-          # Consumer Configuration for Pulsar
-          - name: MSG_URL
+          - name: LOG_LEVEL
             valueFrom:
               secretKeyRef:
                 name: alethic-ism-processor-openai-secret
-                key: MSG_URL
+                key: LOG_LEVEL
 
-          - name: MSG_TOPIC
+          # Consumer Configuration
+          - name: ROUTING_FILE
             valueFrom:
               secretKeyRef:
                 name: alethic-ism-processor-openai-secret
-                key: MSG_TOPIC
-
-          - name: MSG_MANAGE_TOPIC
-            valueFrom:
-              secretKeyRef:
-                name: alethic-ism-processor-openai-secret
-                key: MSG_MANAGE_TOPIC
-
-          - name: MSG_TOPIC_SUBSCRIPTION
-            valueFrom:
-              secretKeyRef:
-                name: alethic-ism-processor-openai-secret
-                key: MSG_TOPIC_SUBSCRIPTION
+                key: ROUTING_FILE
 
           # Primary OpenAI key
           - name: DATABASE_URL
