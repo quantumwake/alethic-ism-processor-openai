@@ -30,6 +30,18 @@ spec:
             subPath: .routing.yaml
             readOnly: true
         env:
+          - name: REDIS_HOST
+            valueFrom:
+              secretKeyRef:
+                name: alethic-ism-processor-openai-secret
+                key: REDIS_HOST
+
+          - name: REDIS_PORT
+            valueFrom:
+              secretKeyRef:
+                name: alethic-ism-processor-openai-secret
+                key: REDIS_PORT
+
           - name: LOG_LEVEL
             valueFrom:
               secretKeyRef:

@@ -1,18 +1,15 @@
-import asyncio
+
+import json
 import os.path
-import time
 from typing import Any
 
 import openai
 import dotenv
 from core.base_processor_lm import BaseProcessorLM
-from core.messaging.base_message_router import Router
-from core.messaging.nats_message_provider import NATSMessageProvider
-from core.processor_state import StateConfigStream
 from core.utils.ismlogging import ism_logger
 
 from openai import OpenAI, Stream
-from core.utils.general_utils import parse_response, build_template_text
+from core.utils.general_utils import parse_response
 
 dotenv.load_dotenv()
 
@@ -38,72 +35,19 @@ class OpenAIChatCompletionProcessor(BaseProcessorLM):
             prompt_tokens = response.usage.prompt_tokens
             total_tokens = response.usage.total_tokens
 
-    async def stream_input_data_entry(self, input_query_state: dict):
-        if not input_query_state:
-            raise ValueError("invalid input state, cannot be empty")
-
-        if not isinstance(self.config, StateConfigStream):
-            raise NotImplementedError()
-
-        status, template = build_template_text(self.template, input_query_state)
-
-        # begin the processing of the prompts
-        logging.debug(f"entered streaming mode, state_id: {self.output_state.id}")
-        try:
-            # # execute the underlying model function
-            stream = self._stream(
-                input_data=input_query_state,
-                template=template,
-            )
-
-            message_provider = NATSMessageProvider()
-            router = Router(provider=message_provider, yaml_file="../routing-nats.yaml")
-            state_route = router.clone_route(
-                selector="processor/state",
-                route_config_updates={
-                    "subject": f"processor.state.{self.output_state.id}",
-                    # "subject": "processor.state",
-                    # "subject": "processor.state.d1df2c10",
-                    "name": f"processor_state_{self.output_state.id}".replace("-", "_")
-                }
-            )
-
-            async for content in stream:
-                if content:
-                    # print(content)
-                    await state_route.publish(content)
-
-            await state_route.publish("<<>>DONE<<>>")
-            await state_route.flush()
-            # time.sleep(1)
-
-            # should gracefully close the connection
-            await state_route.disconnect()
-
-            # try:
-            #     await state_route.disconnect()
-            # except:
-            #     pass
-
-            logging.debug(f"exit streaming mode, state_id: {self.output_state.id}")
-
-
-        except Exception as exception:
-            await self.fail_execute_processor_state(
-                # self.output_processor_state,
-                route_id=self.output_processor_state.id,
-                exception=exception,
-                data=input_query_state
-            )
-
     async def _stream(self, input_data: Any, template: str):
         if not template:
             template = str(input_data)
 
         # Prepare the message dictionary with the query_string
-        messages_dict = [
-            {"role": "user", "content": template.strip()}
-        ]
+        if 'session_id' in input_data:
+            session_id = input_data['session_id']
+            new_message = {"role": "user", "content": template.strip()}
+            self.storage.insert_session_message(session_id, json.dumps(new_message))
+
+        # Add history to the messages if provided (WHICH INCLUDES THE NEW MESSAGE)
+        messages_dict = self.fetch_session_data(input_data)
+        # messages_dict = []    # TODO FLAG: OFF history flag injected here
 
         client = OpenAI()
 
@@ -121,6 +65,14 @@ class OpenAIChatCompletionProcessor(BaseProcessorLM):
             content = chunk.choices[0].delta.content
             response_content.append(content)
             yield content
+
+    # def process_input_data_entry(self, input_query_state: dict, force: bool = False):
+    #     input_query_state = [
+    #         input_query
+    #         for input_query in input_query_state
+    #         if not isinstance(input_query, list)
+    #     ]
+    #     return super().process_input_data_entry(input_query_state=input_query_state, force=force)
 
     def _execute(self, user_prompt: str, system_prompt: str, values: dict):
         messages_dict = []

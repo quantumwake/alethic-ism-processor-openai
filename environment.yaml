@@ -10,7 +10,7 @@ dependencies:
   - psycopg2
   - pyyaml
   - pydantic
-#  - pulsar-client
+  - redis
   - openai
   - tenacity
   - nats-py

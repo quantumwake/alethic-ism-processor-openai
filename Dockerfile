@@ -51,7 +51,7 @@ RUN conda config --add channels conda-forge
 RUN conda config --set channel_priority strict
 
 ## Install Conda packages
-RUN conda install -y pulsar-client
+RUN conda install -y redis
 
 # display all packages installed
 RUN conda list
