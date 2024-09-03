@@ -2,6 +2,7 @@ import os.path
 import openai
 import dotenv
 from core.base_processor_visual import BaseProcessorVisual
+from core.monitored_processor_state import MonitoredUsage
 from core.utils.ismlogging import ism_logger
 from openai import OpenAI
 
@@ -14,7 +15,7 @@ logging = ism_logger(__name__)
 logging.info(f'**** OPENAI API KEY (last 4 chars): {openai_api_key[-4:]} ****')
 
 
-class OpenAIVisualCompletionProcessor(BaseProcessorVisual):
+class OpenAIVisualCompletionProcessor(BaseProcessorVisual, MonitoredUsage):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -35,4 +36,8 @@ class OpenAIVisualCompletionProcessor(BaseProcessorVisual):
         query_state_entry = {
             "image_url": image_url
         }
+
+        # await self.send_usage_input_tokens(response.usage.prompt_tokens)
+        # await self.send_usage_output_tokens(stream.usage.completion_tokens)
+
         return query_state_entry, 'json', None

@@ -1,11 +1,14 @@
-
 import json
 import os.path
-from typing import Any
+from datetime import datetime
+from typing import Any, List
 
 import openai
 import dotenv
+import tiktoken
+from core.base_model import Usage, UnitType, UnitSubType
 from core.base_processor_lm import BaseProcessorLM
+from core.monitored_processor_state import MonitoredUsage
 from core.utils.ismlogging import ism_logger
 
 from openai import OpenAI, Stream
@@ -20,61 +23,91 @@ logging = ism_logger(__name__)
 logging.info(f'**** OPENAI API KEY (last 4 chars): {openai_api_key[-4:]} ****')
 
 
-class OpenAIChatCompletionProcessor(BaseProcessorLM):
+class OpenAIChatCompletionProcessor(BaseProcessorLM, MonitoredUsage):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        MonitoredUsage.__init__(self, **kwargs)
 
     # async def process_input_data_entry(self, input_query_state: dict, force: bool = False):
     #     return []
 
-    def calculate_usage(self, response: Any):
+    def num_tokens_from_string(self, text: str, encoding) -> int:
+        num_tokens = len(encoding.encode(text))
+        return num_tokens
 
-        if isinstance(response, Stream):
-            completion_tokens = response.usage.prompt_tokens
-            prompt_tokens = response.usage.prompt_tokens
-            total_tokens = response.usage.total_tokens
+    def num_tokens_for_chat_messages(self, messages: List[dict], encoding):
+        if not messages:
+            return 0
+
+        # Initialize the tokenizer for the specific model
+        # tokenizer = tiktoken.encoding_for_model(self.provider.version)
+
+        total_tokens = 0
+
+        for message in messages:
+            # Each message is a dictionary with 'role' and 'content'
+            # The API expects tokens for both the role and content
+            role_tokens = encoding.encode(message['role'])
+            content_tokens = encoding.encode(message['content'])
+
+            # Add tokens for both the role and content
+            total_tokens += len(role_tokens) + len(content_tokens)
+
+            # OpenAI's API also includes additional tokens for separators between messages
+            # We can account for these with a fixed number of tokens, typically 2 tokens per message
+            total_tokens += 2  # 1 token for the role and 1 token for the separator between role and content
+
+        return total_tokens
 
     async def _stream(self, input_data: Any, template: str):
         if not template:
             template = str(input_data)
 
-        # Prepare the message dictionary with the query_string
-        if 'session_id' in input_data:
-            session_id = input_data['session_id']
-            new_message = {"role": "user", "content": template.strip()}
-            self.storage.insert_session_message(session_id, json.dumps(new_message))
+        # rendered message we want to submit to the model
+        message_list = self.derive_messages_with_session_data_if_any(template=template, input_data=input_data)
+        # TODO FLAG: OFF history flag injected here
+        # TODO FEATURE: CONFIG PARAMETERS -> EMBEDDINGS
 
-        # Add history to the messages if provided (WHICH INCLUDES THE NEW MESSAGE)
-        messages_dict = self.fetch_session_data(input_data)
-        # messages_dict = []    # TODO FLAG: OFF history flag injected here
+        # Tokenize input and count tokens
+        # input_tokens = sum([len(tiktoken.encode(message['content'])) for message in message_list])
+        encoding = tiktoken.encoding_for_model(self.provider.version)
 
         client = OpenAI()
 
         # Create a streaming completion
         stream = client.chat.completions.create(
             model=self.provider.version,
-            messages=messages_dict,
+            messages=message_list,
             max_tokens=4096,
             stream=True,  # Enable streaming
         )
 
+        # populate the total tokens used
+        input_token_count = self.num_tokens_for_chat_messages(message_list, encoding=encoding)
+
         # Iterate over the streamed responses and yield the content
-        response_content = []
+        output_data = []
+        output_token_count = 0
         for chunk in stream:
             content = chunk.choices[0].delta.content
-            response_content.append(content)
-            yield content
+            if content:
+                output_data.append(content)
+                output_token_count += self.num_tokens_from_string(text=content, encoding=encoding)
+                yield content
 
-    # def process_input_data_entry(self, input_query_state: dict, force: bool = False):
-    #     input_query_state = [
-    #         input_query
-    #         for input_query in input_query_state
-    #         if not isinstance(input_query, list)
-    #     ]
-    #     return super().process_input_data_entry(input_query_state=input_query_state, force=force)
+        # count the number of tokens on output text
 
-    def _execute(self, user_prompt: str, system_prompt: str, values: dict):
+        # add both the user and assistant generated data to the session
+        self.update_session_data(
+            input_data=input_data,
+            input_template=template,
+            output_data="".join(output_data))
+
+        await self.send_usage_input_tokens(input_token_count)
+        await self.send_usage_output_tokens(output_token_count)
+
+    async def _execute(self, user_prompt: str, system_prompt: str, values: dict):
         messages_dict = []
 
         if user_prompt:
@@ -102,8 +135,8 @@ class OpenAIChatCompletionProcessor(BaseProcessorLM):
             stream=False,
         )
 
-        # calcualte the usage
-        # calculate_usage(response=stream)
+        await self.send_usage_input_tokens(stream.usage.prompt_tokens)
+        await self.send_usage_output_tokens(stream.usage.completion_tokens)
 
         # final raw response, without stripping or splitting
         raw_response = stream.choices[0].message.content

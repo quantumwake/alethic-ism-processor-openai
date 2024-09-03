@@ -1,8 +1,9 @@
 import asyncio
 import os
 import random
-
 import dotenv
+dotenv.load_dotenv()
+
 from core.base_model import (
     ProcessorProvider,
     Processor,
@@ -18,12 +19,11 @@ from core.messaging.base_message_router import Router
 from core.messaging.nats_message_provider import NATSMessageProvider
 from core.processor_state import State
 from core.utils.ismlogging import ism_logger
-from db.processor_state_db_storage import PostgresDatabaseWithRedisCacheStorage
+from db.processor_state_db_storage import PostgresDatabaseStorage
 
 from openai_lm import OpenAIChatCompletionProcessor
 from openai_visual import OpenAIVisualCompletionProcessor
 
-dotenv.load_dotenv()
 
 # message routing file, used for both ingress and egress message handling
 ROUTING_FILE = os.environ.get("ROUTING_FILE", '.routing.yaml')
@@ -34,7 +34,7 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:postgres1@l
 
 
 # state storage specifically to handle this processor state (stateless obj)
-storage = PostgresDatabaseWithRedisCacheStorage(
+storage = PostgresDatabaseStorage(
     database_url=DATABASE_URL,
     incremental=True
 )
@@ -54,6 +54,7 @@ openai_route = router.find_route_by_subject("processor.models.openai")
 state_sync_route = router.find_route('processor/state/sync')
 state_router_route = router.find_route('processor/state/router')
 state_stream_route = router.find_route("processor/state")
+usage_route = router.find_route("processor/usage")
 
 state_propagation_provider = StatePropagationProviderDistributor(
     propagators=[
@@ -91,6 +92,7 @@ class MessagingConsumerOpenAI(BaseMessageConsumerProcessor):
                 # state information routing routers
                 monitor_route=self.monitor_route,
                 stream_route=state_stream_route,
+                usage_route=usage_route,
                 state_propagation_provider=state_propagation_provider,
             )
 
@@ -108,6 +110,7 @@ class MessagingConsumerOpenAI(BaseMessageConsumerProcessor):
 
                 # state information routing routers
                 monitor_route=self.monitor_route,
+                usage_route=usage_route,
                 state_propagation_provider=state_propagation_provider
             )
 

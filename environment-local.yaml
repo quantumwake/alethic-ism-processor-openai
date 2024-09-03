@@ -13,6 +13,7 @@ dependencies:
   - pydantic
   - pydantic-core
   - openai
+  - redis
   - tenacity
   - restrictedpython
   - alethic-ism-core

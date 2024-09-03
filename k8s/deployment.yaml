@@ -36,6 +36,12 @@ spec:
                 name: alethic-ism-processor-openai-secret
                 key: REDIS_HOST
 
+          - name: REDIS_PASS
+            valueFrom:
+              secretKeyRef:
+                name: alethic-ism-processor-openai-secret
+                key: REDIS_PASS
+
           - name: REDIS_PORT
             valueFrom:
               secretKeyRef:
