@@ -1,12 +1,9 @@
-import json
 import os.path
-from datetime import datetime
 from typing import Any, List
 
 import openai
 import dotenv
 import tiktoken
-from core.base_model import Usage, UnitType, UnitSubType
 from core.base_processor_lm import BaseProcessorLM
 from core.monitored_processor_state import MonitoredUsage
 from core.utils.ismlogging import ism_logger
@@ -21,6 +18,7 @@ openai.api_key = openai_api_key
 
 logging = ism_logger(__name__)
 logging.info(f'**** OPENAI API KEY (last 4 chars): {openai_api_key[-4:]} ****')
+
 
 
 class OpenAIChatCompletionProcessor(BaseProcessorLM, MonitoredUsage):

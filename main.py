@@ -133,4 +133,4 @@ if __name__ == '__main__':
     consumer_no = random.randint(0, 20)     # this should be a workload identity subscription
 
     consumer.setup_shutdown_signal()
-    asyncio.get_event_loop().run_until_complete(consumer.start_consumer(consumer_no=consumer_no))
+    asyncio.get_event_loop().run_until_complete(consumer.start_consumer())
