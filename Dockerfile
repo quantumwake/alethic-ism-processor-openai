@@ -26,7 +26,7 @@ WORKDIR /app/repo
 SHELL ["/bin/bash", "--login", "-c"]
 
 # install the conda build package in base
-RUN conda install -y conda-build
+RUN conda install -y conda-build -c conda-forge --override-channels
 
 # reindex local channel
 RUN conda index /app/conda/env/local_channel
@@ -44,7 +44,7 @@ RUN echo "conda activate alethic-ism-processor-openai" > ~/.bashrc
 RUN conda info
 
 # Install necessary dependencies for the build process
-RUN conda install -y conda-build
+RUN conda install -y conda-build -c conda-forge --override-channels
 
 #RUN conda clean --all -f -y
 RUN conda config --add channels conda-forge
