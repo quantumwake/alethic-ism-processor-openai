@@ -1,5 +1,5 @@
-alethic-ism-core @ file:///Users/kasrarasaee/Development/quantumwake/alethic-ism-core
-alethic-ism-db @ file:///Users/kasrarasaee/Development/quantumwake/alethic-ism-db
+alethic-ism-core
+alethic-ism-db
 pyyaml
 nats-py
 python-dotenv
