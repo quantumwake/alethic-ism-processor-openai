@@ -4,12 +4,11 @@ from typing import Any, List
 import openai
 import dotenv
 import tiktoken
-from core.base_processor_lm import BaseProcessorLM
-from core.monitored_processor_state import MonitoredUsage
-from core.utils.ismlogging import ism_logger
-
-from openai import OpenAI, Stream
-from core.utils.general_utils import parse_response
+from ismcore.processor.base_processor_lm import BaseProcessorLM
+from ismcore.processor.monitored_processor_state import MonitoredUsage
+from ismcore.utils.general_utils import parse_response
+from ismcore.utils.ism_logger import ism_logger
+from openai import OpenAI
 
 dotenv.load_dotenv()
 

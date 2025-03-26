@@ -1,0 +1,6 @@
+.*
+.env
+.venv
+.k8s
+.github
+k8s/deployment-output.yaml

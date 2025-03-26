@@ -2,24 +2,17 @@ import asyncio
 import os
 import random
 import dotenv
-dotenv.load_dotenv()
+from ismcore.messaging.base_message_consumer_processor import BaseMessageConsumerProcessor
+from ismcore.messaging.base_message_router import Router
+from ismcore.messaging.nats_message_provider import NATSMessageProvider
+from ismcore.model.base_model import Processor, ProcessorProvider, ProcessorState
+from ismcore.model.processor_state import State
+from ismcore.processor.base_processor import StatePropagationProviderRouterStateSyncStore, \
+    StatePropagationProviderRouterStateRouter, StatePropagationProviderDistributor
+from ismcore.utils.ism_logger import ism_logger
+from ismdb.postgres_storage_class import PostgresDatabaseStorage
 
-from core.base_model import (
-    ProcessorProvider,
-    Processor,
-    ProcessorState
-)
-from core.base_processor import (
-    StatePropagationProviderRouterStateSyncStore,
-    StatePropagationProviderDistributor,
-    StatePropagationProviderRouterStateRouter
-)
-from core.messaging.base_message_consumer_processor import BaseMessageConsumerProcessor
-from core.messaging.base_message_router import Router
-from core.messaging.nats_message_provider import NATSMessageProvider
-from core.processor_state import State
-from core.utils.ismlogging import ism_logger
-from db.processor_state_db_storage import PostgresDatabaseStorage
+dotenv.load_dotenv()
 
 from openai_lm import OpenAIChatCompletionProcessor
 from openai_visual import OpenAIVisualCompletionProcessor
