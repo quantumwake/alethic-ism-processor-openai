@@ -1,28 +1,40 @@
 # Alethic Instruction-Based State Machine (OpenAI Processor)
 
-The following processor waits on events from pulsar (but can be extended to use kafka or any pub/sub system)
+### Docker Build
+```shell
+  sh docker_build.sh -t krasaee/alethic-ism-processor-openai:local`
+```
 
-# Installation via conda
-Checkout the ISM core and ISM db repository and build for  
-- * modify the environment_local.yml to reflect your environment path for the ISM core and ISM db packages.
-- 
-- conda env create -f environment_local.yml  
-- conda activate alethic-ism-processor-openai
+### Required Packages
+```shell
+  pip install uv
+```
 
-# Installation
-- conda install pulsar-client
-- conda install pydantic
-- conda install python-dotenv
-- conda install openai
-- conda install tenacity
-- conda install pyyaml
-- conda install psycopg2
+```shell
+  pip venv
+  source .venv/bin/activate
+```
 
-# Remote Alethic Dependencies (if avail otherwise build locally)
-- conda install alethic-ism-core
-- conda install alethic-ism-db
+```shell
+  uv pip install -r requirements.txt
+```
 
-# Local Dependency (build locally if not using remote channel)
-- conda install -c ~/miniconda3/envs/local_channel alethic-ism-core
-- conda install -c ~/miniconda3/envs/local_channel alethic-ism-db
+## Run
+```shell
+docker run -d \
+  --name alethic-ism-processor-openai \
+  -e OPENAI_API_KEY="your_api_key_here" \
+  -e LOG_LEVEL=DEBUG \
+  -e ROUTING_FILE=/app/routing-nats.yaml \
+  -e STATE_DATABASE_URL="postgresql://postgres:postgres1@host.docker.internal:5432/postgres" \
+  krasaee/alethic-ism-processor-openai:latest
+```
+## License
+Alethic ISM is under a DUAL licensing model, please refer to [LICENSE.md](LICENSE.md).
+
+**AGPL v3**  
+Intended for academic, research, and nonprofit institutional use. As long as all derivative works are also open-sourced under the same license, you are free to use, modify, and distribute the software.
+
+**Commercial License**
+Intended for commercial use, including production deployments and proprietary applications. This license allows for closed-source derivative works and commercial distribution. Please contact us for more information.
 
