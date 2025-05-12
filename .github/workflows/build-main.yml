@@ -19,7 +19,7 @@ jobs:
         uses: quantumwake/alethic-ism-github-actions@main
         with:
           # Required inputs
-          image-name: 'krasaee/alethic-processor-openai'
+          image-name: 'krasaee/alethic-ism-processor-openai'
           registry-username: ${{ vars.DOCKERHUB_USERNAME }}
           registry-token: ${{ secrets.DOCKERHUB_TOKEN }}
           registry: 'docker.io'
