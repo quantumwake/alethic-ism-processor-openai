@@ -2,7 +2,7 @@
 .PHONY: build swag clean version all
 
 # Default image name - can be overridden with make IMAGE=your-image-name
-IMAGE ?= krasaee/alethic-ism-api:latest
+IMAGE ?= krasaee/alethic-ism-processor-openai:latest
 
 # Build the Docker image directly
 build:
@@ -40,4 +40,4 @@ help:
 	@echo "  help     - Show this help message"
 	@echo ""
 	@echo "Variables:"
-	@echo "  IMAGE    - Docker image name (default: krasaee/alethic-ism-api:latest)"
+	@echo "  IMAGE    - Docker image name (default: krasaee/alethic-ism-processor-openai:latest)"
