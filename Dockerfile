@@ -18,7 +18,7 @@ RUN . .venv/bin/activate && \
     apt-get update && \
     apt-get install -y git cmake build-essential libpq-dev python3-dev && \
     uv pip install --upgrade pip && \
-    uv pip install -r requirements.txt
+    uv pip install -r requirements.txt -U
 
 # Copy the entrypoint script and ensure it is executable
 COPY entrypoint.sh /usr/local/bin/
