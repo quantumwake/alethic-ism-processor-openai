@@ -71,8 +71,7 @@ class MessagingConsumerOpenAI(BaseMessageConsumerProcessor):
         logging.debug(f"received create processor request {provider.class_name}")
 
         if provider.class_name == "NaturalLanguageProcessing":
-
-            processor = OpenAIChatCompletionProcessor(
+            return OpenAIChatCompletionProcessor(
                 # storage class information
                 state_machine_storage=storage,
 
@@ -90,8 +89,7 @@ class MessagingConsumerOpenAI(BaseMessageConsumerProcessor):
             )
 
         elif provider.class_name == "ImageProcessing":
-
-            processor = OpenAIVisualCompletionProcessor(
+            return OpenAIVisualCompletionProcessor(
                 # storage class information
                 state_machine_storage=storage,
 
@@ -107,23 +105,12 @@ class MessagingConsumerOpenAI(BaseMessageConsumerProcessor):
                 state_propagation_provider=state_propagation_provider
             )
 
-        return processor
-
-    # async def execute(self, consumer_message_mapping: dict):
-    #     pass
-
-
 if __name__ == '__main__':
     consumer = MessagingConsumerOpenAI(
         storage=storage,
         route=openai_route,
         monitor_route=monitor_route
     )
-
-    # TODO think this through - important for workload creation. Here we randomly select a consumer number,
-    #  and hope it does not collide with another consumer; if it does, then the consumer will throw an error
-    #  and should exit, whereby next choosing a different number. Eventually, the consumer will find a spot.
-    consumer_no = random.randint(0, 20)     # this should be a workload identity subscription
 
     consumer.setup_shutdown_signal()
     asyncio.get_event_loop().run_until_complete(consumer.start_consumer())
