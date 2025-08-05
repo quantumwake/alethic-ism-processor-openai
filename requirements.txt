@@ -1,4 +1,4 @@
-alethic-ism-core==1.0.19
+alethic-ism-core==1.0.20
 alethic-ism-db==1.0.21
 pyyaml
 nats-py
