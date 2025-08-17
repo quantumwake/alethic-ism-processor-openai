@@ -1,5 +1,5 @@
-alethic-ism-core==1.0.23
-alethic-ism-db==1.0.23
+alethic-ism-core==1.0.23.dev0
+alethic-ism-db==1.0.15
 pyyaml
 nats-py
 python-dotenv
